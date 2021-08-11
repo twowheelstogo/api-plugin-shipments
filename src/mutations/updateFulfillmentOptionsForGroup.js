@@ -81,7 +81,21 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
   const rates = await context.queries.getFulfillmentMethodsWithQuotes(commonOrder, context);
 
   const { shipmentQuotes, shipmentQuotesQueryStatus } = getShipmentQuotesQueryStatus(rates);
-
+  const currentFulfillment = cart.shipping.find((group) => group._id === fulfillmentGroupId);
+    console.log("currentFulfillment",currentFulfillment);
+    if(currentFulfillment.type === "pickup") {
+      const freeQuote = shipmentQuotes.find((group) => group.method.group === "Free");
+      console.log("freeQuote",freeQuote)
+      if(freeQuote) {
+        await context.mutations.selectFulfillmentOptionForGroup(context,{
+          cartId,
+          cartToken,
+          fulfillmentGroupId,
+          fulfillmentMethodId: freeQuote?.method._id
+        })
+      }
+      
+    }
   if (!_.isEqual(shipmentQuotes, fulfillmentGroup.shipmentQuotes) || !_.isEqual(shipmentQuotesQueryStatus, fulfillmentGroup.shipmentQuotesQueryStatus)) {
     const updatedCart = {
       ...cart,
@@ -96,9 +110,8 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
     };
 
     const savedCart = await context.mutations.saveCart(context, updatedCart);
-
+    
     return { cart: savedCart };
   }
-
   return { cart };
 }
