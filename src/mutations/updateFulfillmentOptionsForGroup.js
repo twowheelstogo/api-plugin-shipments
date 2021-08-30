@@ -92,7 +92,7 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
           fulfillmentMethodId: freeQuote?.method._id
         });
     }
-  }else{
+  }/*else{
     const groundQuotes = shipmentQuotes.filter((group) => group.method.group === "Ground");
     if(groundQuotes.length == 0){
       throw new ReactionError("not-found-ground-quotes", `No se ha agregado los métodos de cobros de envíos`);
@@ -109,12 +109,13 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
       fulfillmentGroupId,
       fulfillmentMethodId: circleQuote.method._id
     });
-  }
+  }*/
   if (!_.isEqual(shipmentQuotes, fulfillmentGroup.shipmentQuotes) || !_.isEqual(shipmentQuotesQueryStatus, fulfillmentGroup.shipmentQuotesQueryStatus)) {
     const updatedCart = {
       ...cart,
       shipping: cart.shipping.map((group) => {
         if (group._id === fulfillmentGroupId) {
+
           return { ...group, shipmentQuotes, shipmentQuotesQueryStatus };
         }
 
