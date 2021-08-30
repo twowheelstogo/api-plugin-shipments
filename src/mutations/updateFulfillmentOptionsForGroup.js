@@ -80,7 +80,7 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
   // In the future we want to do this async and subscribe to the results
   const rates = await context.queries.getFulfillmentMethodsWithQuotes(commonOrder, context);
 
-  const { shipmentQuotes, shipmentQuotesQueryStatus, address } = getShipmentQuotesQueryStatus(rates);
+  const { shipmentQuotes, shipmentQuotesQueryStatus } = getShipmentQuotesQueryStatus(rates);
   const currentFulfillment = cart.shipping.find((group) => group._id === fulfillmentGroupId);  
   if(currentFulfillment.type === "pickup") {
       const freeQuote = shipmentQuotes.find((group) => group.method.group === "Free");
@@ -98,7 +98,7 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
       throw new ReactionError("not-found-ground-quotes", `No se ha agregado los métodos de cobros de envíos`);
     }
     groundQuotes.sort((a, b) => a.handlingPrice-b.handlingPrice);
-    let circleQuote = groundQuotes.find((group) => address.metaddress.distance.value <= group.handlingPrice);
+    let circleQuote = groundQuotes.find((group) => currentFulfillment.address.metaddress.distance.value <= group.handlingPrice);
     if(!circleQuote){
       throw new ReactionError("limit-exceeded-on-ground-quotes", `La distancia está fuera del límite máximo (${groundQuotes[groundQuotes.length-1].handlingPrice} kms), selecciona el método de pickup`);
     }
