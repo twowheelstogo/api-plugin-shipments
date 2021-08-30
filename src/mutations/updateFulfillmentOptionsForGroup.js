@@ -102,6 +102,7 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
     if(!circleQuote){
       throw new ReactionError("limit-exceeded-on-ground-quotes", `La distancia está fuera del límite máximo (${groundQuotes[groundQuotes.length-1].handlingPrice} kms), selecciona el método de pickup`);
     }
+    console.log("fulfillmentGroup is", fulfillmentGroup);
     await context.mutations.selectFulfillmentOptionForGroup(context,{
       cartId,
       cartToken,
