@@ -100,7 +100,7 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
               throw new ReactionError("not-found-ground-quotes", `No se ha agregado los métodos de cobros de envíos`);
             }
             groundQuotes.sort((a, b) => a.handlingPrice-b.handlingPrice);
-            let circleQuote = groundQuotes.find((group) => currentFulfillment.address.metaddress.distance.value <= group.handlingPrice);
+            let circleQuote = groundQuotes.find((group) => group.address.metaddress.distance.value <= group.handlingPrice);
             if(!circleQuote){
               throw new ReactionError("limit-exceeded-on-ground-quotes", `La distancia está fuera del límite máximo (${groundQuotes[groundQuotes.length-1].handlingPrice} kms), selecciona el método de pickup`);
             }
