@@ -102,10 +102,9 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
             }
             groundQuotes.sort((a, b) => a.handlingPrice-b.handlingPrice);
             let circleQuote = groundQuotes.find((group2) => group.address.metaddress.distance.value <= group2.handlingPrice);
-            if(!circleQuote){
-              throw new ReactionError("limit-exceeded-on-ground-quotes", `La distancia está fuera del límite máximo (${groundQuotes[groundQuotes.length-1].handlingPrice} kms), selecciona el método de pickup`);
+            if(circleQuote){
+              shipmentMethod = circleQuote.method;
             }
-            shipmentMethod = circleQuote.method;
           }
           if (shipmentMethod != null){
             return { ...group, shipmentQuotes, shipmentQuotesQueryStatus, shipmentMethod};
