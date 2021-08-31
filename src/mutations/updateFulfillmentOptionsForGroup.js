@@ -104,6 +104,8 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
             let circleQuote = groundQuotes.find((group2) => group.address.metaddress.distance.value <= group2.handlingPrice);
             if(circleQuote){
               shipmentMethod = circleQuote.method;
+            }else{
+              shipmentMethod = undefined;
             }
           }
           if (shipmentMethod != null){
