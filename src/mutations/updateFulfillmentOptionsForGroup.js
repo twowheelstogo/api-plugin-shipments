@@ -108,7 +108,7 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
               shipmentMethod = undefined;
             }
           }
-          if (shipmentMethod != null){
+          if (shipmentMethod !== null){
             return { ...group, shipmentQuotes, shipmentQuotesQueryStatus, shipmentMethod};
           }else{
             return { ...group, shipmentQuotes, shipmentQuotesQueryStatus};
