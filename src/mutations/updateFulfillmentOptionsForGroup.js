@@ -87,7 +87,7 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
       ...cart,
       shipping: cart.shipping.map((group) => {
         if (group._id === fulfillmentGroupId) {
-          let shipmentMethod = {};
+          let shipmentMethod = null;
           if(group.type === "pickup") {
               const freeQuote = shipmentQuotes.find((group2) => group2.method.group === "Free");
               if(freeQuote) {
@@ -95,7 +95,7 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
               } else{
                 throw new ReactionError("not-found-free-quotes", `No se ha agregado los métodos gratuitos`);
               }
-          }else{
+          }else if(group.address){
             const groundQuotes = shipmentQuotes.filter((group2) => group2.method.group === "Ground");
             if(groundQuotes.length == 0){
               throw new ReactionError("not-found-ground-quotes", `No se ha agregado los métodos de cobros de envíos`);
@@ -107,8 +107,11 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
             }
             shipmentMethod = circleQuote.method;
           }
-
-          return { ...group, shipmentQuotes, shipmentQuotesQueryStatus, shipmentMethod};
+          if (shipmentMethod != null){
+            return { ...group, shipmentQuotes, shipmentQuotesQueryStatus, shipmentMethod};
+          }else{
+            return { ...group, shipmentQuotes, shipmentQuotesQueryStatus};
+          }
         }
         return group;
       }),
