@@ -88,19 +88,20 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
         if (group._id === fulfillmentGroupId) {
           let shipmentMethod = {};
           if(group.type === "pickup") {
-              const freeQuote = shipmentQuotes.find((group) => group.method.group === "Free");
+              const freeQuote = shipmentQuotes.find((group2) => group2.method.group === "Free");
               if(freeQuote) {
                 shipmentMethod = freeQuote.method;
               } else{
                 throw new ReactionError("not-found-free-quotes", `No se ha agregado los métodos gratuitos`);
               }
           }else{
-            const groundQuotes = shipmentQuotes.filter((group) => group.method.group === "Ground");
+            const groundQuotes = shipmentQuotes.filter((group2) => group2.method.group === "Ground");
             if(groundQuotes.length == 0){
               throw new ReactionError("not-found-ground-quotes", `No se ha agregado los métodos de cobros de envíos`);
             }
             groundQuotes.sort((a, b) => a.handlingPrice-b.handlingPrice);
-            let circleQuote = groundQuotes.find((group) => group.address.metaddress.distance.value <= group.handlingPrice);
+            console.log("group", group);
+            let circleQuote = groundQuotes.find((group2) => group.address.metaddress.distance.value <= group2.handlingPrice);
             if(!circleQuote){
               throw new ReactionError("limit-exceeded-on-ground-quotes", `La distancia está fuera del límite máximo (${groundQuotes[groundQuotes.length-1].handlingPrice} kms), selecciona el método de pickup`);
             }
