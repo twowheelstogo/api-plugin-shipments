@@ -86,6 +86,7 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
     const updatedCart = {
       ...cart,
       shipping: cart.shipping.map((group) => {
+        console.log("group.address.metaddress", group.address.metaddress);
         if (group._id === fulfillmentGroupId) {
           let shipmentMethod = {};
           if(group.type === "pickup") {
