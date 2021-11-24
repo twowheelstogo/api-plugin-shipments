@@ -7,9 +7,9 @@ const inputSchema = new SimpleSchema({
   cartId: String,
   cartToken: {
     type: String,
-    optional: true
+    optional: true,
   },
-  fulfillmentGroupId: String
+  fulfillmentGroupId: String,
 });
 
 /**
@@ -23,8 +23,8 @@ function getShipmentQuotesQueryStatus(rates) {
     return {
       shipmentQuotes: [],
       shipmentQuotesQueryStatus: {
-        requestStatus: "pending"
-      }
+        requestStatus: "pending",
+      },
     };
   }
 
@@ -35,8 +35,8 @@ function getShipmentQuotesQueryStatus(rates) {
       shipmentQuotesQueryStatus: {
         requestStatus: errorResult.requestStatus,
         shippingProvider: errorResult.shippingProvider,
-        message: errorResult.message
-      }
+        message: errorResult.message,
+      },
     };
   }
 
@@ -44,10 +44,24 @@ function getShipmentQuotesQueryStatus(rates) {
     shipmentQuotes: rates,
     shipmentQuotesQueryStatus: {
       requestStatus: "success",
-      numOfShippingMethodsFound: rates.length
-    }
+      numOfShippingMethodsFound: rates.length,
+    },
   };
 }
+
+const _getShippingFree = (shipmentQuotes) => {
+  const freeQuote = shipmentQuotes.find(
+    (group2) => group2.method.group === "Free"
+  );
+  if (freeQuote) {
+    return freeQuote.method;
+  } else {
+    throw new ReactionError(
+      "not-found-free-quotes",
+      `No se ha agregado los métodos gratuitos`
+    );
+  }
+};
 
 /**
  * @method updateFulfillmentOptionsForGroup
@@ -65,63 +79,103 @@ export default async function updateFulfillmentOptionsForGroup(context, input) {
 
   const { cartId, cartToken, fulfillmentGroupId } = cleanedInput;
 
-  const cart = await getCartById(context, cartId, { cartToken, throwIfNotFound: true });
+  const cart = await getCartById(context, cartId, {
+    cartToken,
+    throwIfNotFound: true,
+  });
 
   // This is done by `saveCart`, too, but we need to do it before every call to `getCommonOrderForCartGroup`
   // to avoid errors in the case where a product has been deleted since the last time this cart was saved.
   // This mutates that `cart` object.
   await context.mutations.removeMissingItemsFromCart(context, cart);
 
-  const fulfillmentGroup = (cart.shipping || []).find((group) => group._id === fulfillmentGroupId);
-  if (!fulfillmentGroup) throw new ReactionError("not-found", `Fulfillment group with ID ${fulfillmentGroupId} not found in cart with ID ${cartId}`);
+  const fulfillmentGroup = (cart.shipping || []).find(
+    (group) => group._id === fulfillmentGroupId
+  );
+  if (!fulfillmentGroup)
+    throw new ReactionError(
+      "not-found",
+      `Fulfillment group with ID ${fulfillmentGroupId} not found in cart with ID ${cartId}`
+    );
 
-  const commonOrder = await context.queries.getCommonOrderForCartGroup(context, { cart, fulfillmentGroupId: fulfillmentGroup._id });
+  const commonOrder = await context.queries.getCommonOrderForCartGroup(
+    context,
+    { cart, fulfillmentGroupId: fulfillmentGroup._id }
+  );
 
   // In the future we want to do this async and subscribe to the results
-  const rates = await context.queries.getFulfillmentMethodsWithQuotes(commonOrder, context);
+  const rates = await context.queries.getFulfillmentMethodsWithQuotes(
+    commonOrder,
+    context
+  );
 
-  const { shipmentQuotes, shipmentQuotesQueryStatus } = getShipmentQuotesQueryStatus(rates);
+  const { shipmentQuotes, shipmentQuotesQueryStatus } =
+    getShipmentQuotesQueryStatus(rates);
   //if (!_.isEqual(shipmentQuotes, fulfillmentGroup.shipmentQuotes) || !_.isEqual(shipmentQuotesQueryStatus, fulfillmentGroup.shipmentQuotesQueryStatus)) {
 
-    const updatedCart = {
-      ...cart,
-      shipping: cart.shipping.map((group) => {
-        if (group._id === fulfillmentGroupId) {
-          let shipmentMethod = null;
-          if(group.type === "pickup") {
-              const freeQuote = shipmentQuotes.find((group2) => group2.method.group === "Free");
-              if(freeQuote) {
-                shipmentMethod = freeQuote.method;
-              } else{
-                throw new ReactionError("not-found-free-quotes", `No se ha agregado los métodos gratuitos`);
-              }
-          }else if(group.address){
-            const groundQuotes = shipmentQuotes.filter((group2) => group2.method.group === "Ground");
-            if(groundQuotes.length == 0){
-              throw new ReactionError("not-found-ground-quotes", `No se ha agregado los métodos de cobros de envíos`);
+  const updatedCart = {
+    ...cart,
+    shipping: cart.shipping.map((group) => {
+      if (group._id === fulfillmentGroupId) {
+        let shipmentMethod = null;
+        if (group.type === "pickup") {
+          shipmentMethod = _getShippingFree(shipmentQuotes);
+        } else if (group.address) {
+          let cost = 0;
+          try {
+            cost = cart.items.reduce((previousValue, currentValue) => {
+              return {
+                subtotal: {
+                  amount:
+                    previousValue.subtotal.amount +
+                    currentValue.subtotal.amount,
+                },
+              };
+            }).subtotal.amount;
+          } catch (ex2) {}
+          if (cost <= 150) {
+            const groundQuotes = shipmentQuotes.filter(
+              (group2) => group2.method.group === "Ground"
+            );
+            if (groundQuotes.length == 0) {
+              throw new ReactionError(
+                "not-found-ground-quotes",
+                `No se ha agregado los métodos de cobros de envíos`
+              );
             }
-            groundQuotes.sort((a, b) => a.handlingPrice-b.handlingPrice);
-            let circleQuote = groundQuotes.find((group2) => group.address.metaddress.distance.value <= group2.handlingPrice);
-            if(circleQuote){
+            groundQuotes.sort((a, b) => a.handlingPrice - b.handlingPrice);
+            let circleQuote = groundQuotes.find(
+              (group2) =>
+                group.address.metaddress.distance.value <= group2.handlingPrice
+            );
+            if (circleQuote) {
               shipmentMethod = circleQuote.method;
-            }else{
+            } else {
               shipmentMethod = undefined;
             }
-          }
-          if (shipmentMethod !== null){
-            return { ...group, shipmentQuotes, shipmentQuotesQueryStatus, shipmentMethod};
-          }else{
-            return { ...group, shipmentQuotes, shipmentQuotesQueryStatus};
+          } else {
+            shipmentMethod = _getShippingFree(shipmentQuotes);
           }
         }
-        return group;
-      }),
-      updatedAt: new Date()
-    };
+        if (shipmentMethod !== null) {
+          return {
+            ...group,
+            shipmentQuotes,
+            shipmentQuotesQueryStatus,
+            shipmentMethod,
+          };
+        } else {
+          return { ...group, shipmentQuotes, shipmentQuotesQueryStatus };
+        }
+      }
+      return group;
+    }),
+    updatedAt: new Date(),
+  };
 
-    const savedCart = await context.mutations.saveCart(context, updatedCart);
-    
-    return { cart: savedCart };
+  const savedCart = await context.mutations.saveCart(context, updatedCart);
+
+  return { cart: savedCart };
   //}
   //return { cart };
 }
